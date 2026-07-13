@@ -70,9 +70,3 @@ supabase/
   schema.sql              # tabelas + RLS
   seed.sql                # ~1000 livros (gerado)
 ```
-
-## Roadmap
-
-- **v1 (MVP):** modo diário ✅, ilimitado, frases, capa (zoom), login, estatísticas, compartilhamento ✅, admin
-- **v2:** personagens, autores, emojis, blur, ranking, conquistas, XP
-- **v3:** eventos sazonais, temas, app Android (Capacitor), premium, multiplayer
