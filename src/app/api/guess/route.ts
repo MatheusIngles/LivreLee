@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       kind: "book",
       date: todayKey(),
-      compare: mode.compare, // "book" | "book:year" | "book:pages" | "book:sales"
       ...feedback,
       answer: feedback.won
         ? { title: target.title, author: target.author, cover_url: target.cover_url }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/lib/i18n/LocaleProvider";
 import type { BookSearchResult } from "@/lib/types";
 
 export type Guess =
@@ -23,6 +24,7 @@ interface Row {
 }
 
 export default function SearchBox({ kind, onGuess, disabled, exclude = [] }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Row[]>([]);
   const [open, setOpen] = useState(false);
@@ -108,10 +110,10 @@ export default function SearchBox({ kind, onGuess, disabled, exclude = [] }: Pro
   }
 
   const placeholder = disabled
-    ? "Rodada encerrada"
+    ? t.searchBox.roundEnded
     : kind === "book"
-      ? "Digite o título ou autor…"
-      : "Digite o nome do autor…";
+      ? t.searchBox.typeBookOrAuthor
+      : t.searchBox.typeAuthorName;
 
   return (
     <div ref={containerRef} className="relative w-full">

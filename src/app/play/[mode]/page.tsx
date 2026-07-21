@@ -20,11 +20,14 @@ import {
 } from "@/lib/storage";
 import { evaluateAchievements, type AchievementDef } from "@/lib/achievements";
 import { ArrowLeft, ModeIcon, AchievementIcon } from "@/components/icons";
+import CompareGame from "@/components/CompareGame";
+import Confetti from "@/components/Confetti";
+import { useI18n } from "@/lib/i18n/LocaleProvider";
+import LocaleSwitch from "@/components/LocaleSwitch";
 
 interface GuessResponse {
   kind: "book" | "author";
   date: string;
-  compare?: string;
   won: boolean;
   guess: Record<string, unknown>;
   fields: Record<string, unknown>;
@@ -41,8 +44,17 @@ interface DailySave {
 }
 
 export default function PlayPage({ params }: { params: Promise<{ mode: string }> }) {
+  return (
+    <Suspense fallback={<main className="flex-1 flex items-center justify-center text-zinc-500">…</main>}>
+      <PlayPageInner params={params} />
+    </Suspense>
+  );
+}
+
+function PlayPageInner({ params }: { params: Promise<{ mode: string }> }) {
   const { mode: modeId } = use(params);
   const mode = getMode(modeId);
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const lang = parseLangFilter(searchParams.get("lang"));
   // Estado diário é salvo por variante de idioma (mesma convenção do servidor).
@@ -73,23 +85,25 @@ export default function PlayPage({ params }: { params: Promise<{ mode: string }>
     try {
       const res = await fetch(`/api/round?mode=${mode.id}&lang=${lang}`);
       if (res.status === 503) {
-        setError("Este modo ainda não tem conteúdo suficiente. Volte em breve!");
+        setError(t.play.notEnoughContent);
         setRound(null);
         return;
       }
       if (!res.ok) throw new Error();
       setRound((await res.json()) as RoundPayload);
     } catch {
-      setError("Não foi possível carregar a rodada.");
+      setError(t.play.couldNotLoadRound);
     } finally {
       setLoading(false);
     }
-  }, [mode, lang]);
+  }, [mode, lang, t]);
 
   // Carrega a rodada. Para o diário, tenta retomar o estado salvo do dia
   // (por variante de idioma).
   useEffect(() => {
-    if (!mode) {
+    if (!mode || mode.mechanic === "higher-lower") {
+      // Modos "maior ou menor" usam <CompareGame>, que busca sua própria rodada.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }
@@ -187,7 +201,7 @@ export default function PlayPage({ params }: { params: Promise<{ mode: string }>
       }
       if (nowFinished) finishGame(next, didWin);
     } catch {
-      setError("Não foi possível enviar o palpite.");
+      setError(t.play.couldNotSubmitGuess);
     } finally {
       setBusy(false);
     }
@@ -212,8 +226,8 @@ export default function PlayPage({ params }: { params: Promise<{ mode: string }>
           .join("");
       })
       .join("\n");
-    return `${mode.emoji} LivreLee ${mode.name} — ${score}\n${rows}`;
-  }, [finished, won, guesses, maxGuesses, mode]);
+    return `${mode.emoji} LivreLee ${t.modes[mode.id].name} — ${score}\n${rows}`;
+  }, [finished, won, guesses, maxGuesses, mode, t]);
 
   async function share() {
     try {
@@ -234,9 +248,9 @@ export default function PlayPage({ params }: { params: Promise<{ mode: string }>
   if (!mode) {
     return (
       <main className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-        <p className="text-xl">Modo não encontrado. 🤔</p>
+        <p className="text-xl">{t.play.modeNotFound}</p>
         <Link href="/" className="inline-flex items-center gap-1.5 text-amber-400 hover:underline">
-          <ArrowLeft className="h-4 w-4" /> voltar ao início
+          <ArrowLeft className="h-4 w-4" /> {t.play.backToHome}
         </Link>
       </main>
     );
@@ -245,97 +259,101 @@ export default function PlayPage({ params }: { params: Promise<{ mode: string }>
   const answerBook = (won ? guesses[0]?.answer : null) as
     | { title?: string; author?: string; name?: string }
     | null;
+  const modeText = t.modes[mode.id];
 
   return (
     <main className="flex-1 flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-2xl">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-amber-400">
-          <ArrowLeft className="h-4 w-4" /> voltar
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-amber-400">
+            <ArrowLeft className="h-4 w-4" /> {t.common.back}
+          </Link>
+          <LocaleSwitch />
+        </div>
 
         <h1 className="mt-3 flex items-center gap-2 text-3xl font-bold">
-          <ModeIcon id={mode.id} className="h-7 w-7 text-amber-400" /> {mode.name}
+          <ModeIcon id={mode.id} className="h-7 w-7 text-amber-400" /> {modeText.name}
         </h1>
-        <p className="mt-1 text-sm text-zinc-400">{mode.description}</p>
+        <p className="mt-1 text-sm text-zinc-400">{modeText.description}</p>
 
         <div className="mt-6 space-y-5">
-          {loading && <p className="text-center text-zinc-500">Carregando rodada…</p>}
-          {error && <p className="rounded-xl border border-red-800 bg-red-950/40 p-4 text-center text-red-300">{error}</p>}
-
-          {round && !error && (
+          {mode.mechanic === "higher-lower" ? (
+            <CompareGame mode={mode} lang={lang} />
+          ) : (
             <>
-              {mode.clueType !== "none" && (
-                <Clue clueType={round.clueType} clue={round.clue} attempts={wrongCount} maxGuesses={maxGuesses} />
-              )}
+              {loading && <p className="text-center text-zinc-500">{t.play.loadingRound}</p>}
+              {error && <p className="rounded-xl border border-red-800 bg-red-950/40 p-4 text-center text-red-300">{error}</p>}
 
-              {!finished && (
-                <div>
-                  <p className="mb-2 text-center text-sm text-zinc-500">
-                    {maxGuesses - guesses.length} tentativa{maxGuesses - guesses.length > 1 ? "s" : ""} restante{maxGuesses - guesses.length > 1 ? "s" : ""}
-                  </p>
-                  <SearchBox
-                    kind={round.guessType}
-                    onGuess={submit}
-                    disabled={busy}
-                    exclude={guesses.map((g) =>
-                      g.kind === "book" ? String(g.guess.title) : String(g.guess.name)
-                    )}
-                  />
-                </div>
-              )}
-
-              {won && (
-                <div className="rounded-2xl border border-emerald-600 bg-emerald-950/40 p-5 text-center">
-                  <p className="text-2xl">🎉</p>
-                  <p className="mt-1 font-semibold text-emerald-300">
-                    Acertou em {guesses.length} tentativa{guesses.length > 1 ? "s" : ""}!
-                  </p>
-                  {answerBook && (answerBook.title || answerBook.name) ? (
-                    <p className="text-sm text-zinc-300">
-                      {String(answerBook.title ?? answerBook.name)}
-                      {answerBook.author ? ` — ${String(answerBook.author)}` : ""}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-              {lost && (
-                <div className="rounded-2xl border border-red-800 bg-red-950/40 p-5 text-center">
-                  <p className="text-2xl">😔</p>
-                  <p className="mt-1 font-semibold text-red-300">
-                    {isDaily ? "Acabaram as tentativas. Volte amanhã!" : "Não foi dessa vez!"}
-                  </p>
-                </div>
-              )}
-
-              {finished && (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button onClick={share} className="flex-1 rounded-xl bg-amber-500 px-4 py-3 font-semibold text-zinc-900 transition hover:bg-amber-400">
-                    {copied ? "Copiado! 📋" : "Compartilhar"}
-                  </button>
-                  {!isDaily && (
-                    <button onClick={playAgain} className="flex-1 rounded-xl border border-zinc-600 px-4 py-3 font-semibold transition hover:border-amber-400">
-                      Nova rodada 🎲
-                    </button>
+              {round && !error && (
+                <>
+                  {mode.clueType !== "none" && (
+                    <Clue clueType={round.clueType} clue={round.clue} attempts={wrongCount} maxGuesses={maxGuesses} />
                   )}
-                </div>
-              )}
 
-              <div className="flex flex-col gap-4">
-                {guesses.map((g, i) =>
-                  g.kind === "book" ? (
-                    <BookGuessRow
-                      key={i}
-                      feedback={g as unknown as Parameters<typeof BookGuessRow>[0]["feedback"]}
-                      compare={g.compare}
-                    />
-                  ) : (
-                    <AuthorGuessRow
-                      key={i}
-                      feedback={g as unknown as Parameters<typeof AuthorGuessRow>[0]["feedback"]}
-                    />
-                  )
-                )}
-              </div>
+                  {!finished && (
+                    <div>
+                      <p className="mb-2 text-center text-sm text-zinc-500">
+                        {t.play.attemptsRemaining(maxGuesses - guesses.length)}
+                      </p>
+                      <SearchBox
+                        kind={round.guessType}
+                        onGuess={submit}
+                        disabled={busy}
+                        exclude={guesses.map((g) =>
+                          g.kind === "book" ? String(g.guess.title) : String(g.guess.name)
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {won && (
+                    <div className="animate-pop-in relative overflow-hidden rounded-2xl border border-emerald-600 bg-emerald-950/40 p-5 text-center">
+                      <Confetti />
+                      <p className="text-2xl">🎉</p>
+                      <p className="mt-1 font-semibold text-emerald-300">{t.play.wonMessage(guesses.length)}</p>
+                      {answerBook && (answerBook.title || answerBook.name) ? (
+                        <p className="text-sm text-zinc-300">
+                          {String(answerBook.title ?? answerBook.name)}
+                          {answerBook.author ? ` — ${String(answerBook.author)}` : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+                  {lost && (
+                    <div className="animate-pop-in rounded-2xl border border-red-800 bg-red-950/40 p-5 text-center">
+                      <p className="text-2xl">😔</p>
+                      <p className="mt-1 font-semibold text-red-300">
+                        {isDaily ? t.play.lostMessageDaily : t.play.lostMessageOther}
+                      </p>
+                    </div>
+                  )}
+
+                  {finished && (
+                    <div className="animate-fade-in-up flex flex-col gap-2 sm:flex-row">
+                      <button onClick={share} className="flex-1 rounded-xl bg-amber-500 px-4 py-3 font-semibold text-zinc-900 transition hover:bg-amber-400">
+                        {copied ? t.common.copied : t.common.share}
+                      </button>
+                      {!isDaily && (
+                        <button onClick={playAgain} className="flex-1 rounded-xl border border-zinc-600 px-4 py-3 font-semibold transition hover:border-amber-400">
+                          {t.play.newRound}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-4">
+                    {guesses.map((g, i) => (
+                      <div key={i} className="animate-fade-in-up" style={{ animationDelay: `${i * 0.05}s` }}>
+                        {g.kind === "book" ? (
+                          <BookGuessRow feedback={g as unknown as Parameters<typeof BookGuessRow>[0]["feedback"]} />
+                        ) : (
+                          <AuthorGuessRow feedback={g as unknown as Parameters<typeof AuthorGuessRow>[0]["feedback"]} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -343,14 +361,18 @@ export default function PlayPage({ params }: { params: Promise<{ mode: string }>
 
       {unlocked.length > 0 && (
         <div className="fixed bottom-4 right-4 z-20 flex flex-col gap-2">
-          {unlocked.map((a) => (
-            <div key={a.slug} className="flex items-center gap-3 rounded-xl border border-amber-500 bg-zinc-900 px-4 py-3 shadow-xl">
+          {unlocked.map((a, i) => (
+            <div
+              key={a.slug}
+              className="animate-slide-in-right flex items-center gap-3 rounded-xl border border-amber-500 bg-zinc-900 px-4 py-3 shadow-xl"
+              style={{ animationDelay: `${i * 0.12}s` }}
+            >
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">
                 <AchievementIcon slug={a.slug} className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-xs text-amber-400">Conquista desbloqueada!</p>
-                <p className="text-sm font-semibold">{a.name}</p>
+                <p className="text-xs text-amber-400">{t.common.achievementUnlocked}</p>
+                <p className="text-sm font-semibold">{t.achievementDefs[a.slug].name}</p>
               </div>
             </div>
           ))}

@@ -36,7 +36,7 @@ function cmpNullableNumber(
   return cmpNumber(guess, target, partialRange);
 }
 
-/** Compara o livro palpitado com o alvo, estilo Loldle (grade completa). */
+/** Compara o livro palpitado com o alvo (grade completa de atributos). */
 export function compareGuess(guess: Book, target: Book): GuessFeedback {
   return {
     won: guess.id === target.id,
@@ -64,7 +64,7 @@ export function compareGuess(guess: Book, target: Book): GuessFeedback {
   };
 }
 
-/** Compara dois autores por seus atributos agregados (estilo Loldle). */
+/** Compara dois autores por seus atributos agregados. */
 export function compareAuthorGuess(guess: Author, target: Author): AuthorGuessFeedback {
   return {
     won: guess.name.trim().toLowerCase() === target.name.trim().toLowerCase(),

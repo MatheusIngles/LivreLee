@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { getActiveEvent } from "@/lib/events";
 import { todayKey } from "@/lib/game";
+import { dictionaries } from "@/lib/i18n/dictionaries";
 
 /**
  * Cron de eventos (Vercel Cron): reflete o evento ativo do dia (calculado por
@@ -29,7 +30,9 @@ export async function GET(req: NextRequest) {
   const { error } = await supabase.from("events").upsert(
     {
       slug: event.slug,
-      name: event.name,
+      // Registro em português por padrão (só para histórico/relatório — a UI
+      // sempre traduz pelo slug via dictionaries[locale].events).
+      name: dictionaries.pt.events[event.slug],
       kind: event.kind,
       filter_genre: event.filterGenre ?? null,
       theme: event.theme,

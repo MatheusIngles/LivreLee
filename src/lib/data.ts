@@ -92,16 +92,19 @@ export async function getDailyBook(lang: LangFilter = "all"): Promise<Book> {
     if (existing) return existing;
 
     const bookId = await selectDailyBookId(supabase, { modeKey, lang });
-    await supabase
+    const { error: upsertError } = await supabase
       .from("daily_challenges")
       .upsert(
         { challenge_date: date, mode: modeKey, book_id: bookId },
         { onConflict: "challenge_date,mode", ignoreDuplicates: true }
       );
+    if (upsertError) {
+      throw new Error(`getDailyBook: falha ao gravar o desafio do dia — ${upsertError.message}`);
+    }
 
     const canonical = await readTodayChallenge(supabase, date, modeKey);
     if (canonical) return canonical;
-    throw new Error("getDailyBook: falha ao registrar o desafio do dia");
+    throw new Error("getDailyBook: desafio gravado mas não encontrado na releitura");
   }
 
   const pool =

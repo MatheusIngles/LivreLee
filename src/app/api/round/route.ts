@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       maxGuesses: resolved.maxGuesses,
       progressive: resolved.progressive,
       clue,
-      event: { slug: event.slug, name: `${event.emoji} ${event.name}`, theme: event.theme },
+      event: { slug: event.slug, theme: event.theme },
     };
     return NextResponse.json(payload);
   } catch (err) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n/LocaleProvider";
 import type {
   AuthorGuessFeedback,
   Cmp,
@@ -42,35 +43,26 @@ function sales(v: number | null): string {
   return v == null ? "?" : `${v}M`;
 }
 
-/** compare: "book" mostra tudo; "book:year|pages|sales" mostra só o eixo. */
-export function BookGuessRow({
-  feedback,
-  compare = "book",
-}: {
-  feedback: GuessFeedback;
-  compare?: string;
-}) {
+/** Grade completa de atributos (modos "guess" — os "higher-lower" usam CompareGame). */
+export function BookGuessRow({ feedback }: { feedback: GuessFeedback }) {
+  const { t } = useI18n();
   const { guess, fields } = feedback;
-  const single = compare.startsWith("book:") ? compare.split(":")[1] : null;
 
   const cells = [
-    { key: "author", el: <Cell label="Autor" value={guess.author} cmp={fields.author} /> },
-    { key: "year", el: <Cell label="Ano" value={guess.year} cmp={fields.year.cmp} dir={fields.year.dir} /> },
-    { key: "country", el: <Cell label="País" value={guess.country} cmp={fields.country} /> },
-    { key: "language", el: <Cell label="Idioma" value={guess.language} cmp={fields.language} /> },
-    { key: "genre", el: <Cell label="Gênero" value={guess.genre} cmp={fields.genre} /> },
-    { key: "pages", el: <Cell label="Páginas" value={guess.pages} cmp={fields.pages.cmp} dir={fields.pages.dir} /> },
-    { key: "sales", el: <Cell label="Vendas" value={sales(guess.sales_estimate)} cmp={fields.sales.cmp} dir={fields.sales.dir} /> },
+    { key: "author", el: <Cell label={t.guessRow.author} value={guess.author} cmp={fields.author} /> },
+    { key: "year", el: <Cell label={t.guessRow.year} value={guess.year} cmp={fields.year.cmp} dir={fields.year.dir} /> },
+    { key: "country", el: <Cell label={t.guessRow.country} value={guess.country} cmp={fields.country} /> },
+    { key: "language", el: <Cell label={t.guessRow.language} value={guess.language} cmp={fields.language} /> },
+    { key: "genre", el: <Cell label={t.guessRow.genre} value={guess.genre} cmp={fields.genre} /> },
+    { key: "pages", el: <Cell label={t.guessRow.pages} value={guess.pages} cmp={fields.pages.cmp} dir={fields.pages.dir} /> },
+    { key: "sales", el: <Cell label={t.guessRow.sales} value={sales(guess.sales_estimate)} cmp={fields.sales.cmp} dir={fields.sales.dir} /> },
   ];
-  const shown = single ? cells.filter((c) => c.key === single) : cells;
 
   return (
     <div className="w-full">
       <p className="mb-1 text-sm font-medium text-zinc-300">📖 {guess.title}</p>
-      <div
-        className={`grid gap-1.5 ${single ? "grid-cols-1 max-w-40" : "grid-cols-3 sm:grid-cols-7"}`}
-      >
-        {shown.map((c) => (
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-7">
+        {cells.map((c) => (
           <div key={c.key}>{c.el}</div>
         ))}
       </div>
@@ -79,15 +71,16 @@ export function BookGuessRow({
 }
 
 export function AuthorGuessRow({ feedback }: { feedback: AuthorGuessFeedback }) {
+  const { t } = useI18n();
   const { guess, fields } = feedback;
   return (
     <div className="w-full">
       <p className="mb-1 text-sm font-medium text-zinc-300">✍️ {guess.name}</p>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-        <Cell label="País" value={guess.country ?? "?"} cmp={fields.country} />
-        <Cell label="Idioma" value={guess.language ?? "?"} cmp={fields.language} />
-        <Cell label="1ª obra" value={guess.first_year} cmp={fields.first_year.cmp} dir={fields.first_year.dir} />
-        <Cell label="Gênero" value={guess.main_genre} cmp={fields.main_genre} />
+        <Cell label={t.guessRow.country} value={guess.country ?? "?"} cmp={fields.country} />
+        <Cell label={t.guessRow.language} value={guess.language ?? "?"} cmp={fields.language} />
+        <Cell label={t.guessRow.firstWork} value={guess.first_year} cmp={fields.first_year.cmp} dir={fields.first_year.dir} />
+        <Cell label={t.guessRow.genre} value={guess.main_genre} cmp={fields.main_genre} />
       </div>
     </div>
   );

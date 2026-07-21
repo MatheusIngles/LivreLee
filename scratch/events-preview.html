@@ -1,0 +1,289 @@
+<title>LivreLee — eventos especiais</title>
+<style>
+  :root {
+    --bg: #09090b;
+    --panel: #18181b;
+    --panel-border: #3f3f46;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    padding: 2.5rem 1.5rem 4rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+  .lede { color: var(--muted); font-size: 0.9rem; margin: 0 0 2rem; max-width: 60ch; }
+
+  .stage {
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    background: radial-gradient(120% 140% at 50% -10%, color-mix(in srgb, var(--accent) 14%, transparent), var(--panel) 55%);
+    padding: 2.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: background 0.5s ease;
+    margin-bottom: 2rem;
+  }
+  .stage .logo {
+    background: #fff;
+    border-radius: 16px;
+    padding: 0.6rem 1rem;
+    font-weight: 700;
+    color: #18181b;
+    font-size: 1.1rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  }
+  .stage .tagline {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0.9rem 0 0;
+  }
+  .badge {
+    margin-top: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 0.35rem 1rem;
+    font-size: 0.85rem;
+    transition: color 0.4s ease, border-color 0.4s ease;
+  }
+  .badge .emoji { font-size: 1rem; }
+  .stage .pill {
+    margin-top: 1rem;
+    display: inline-flex;
+    gap: 0.4rem;
+    border: 1px solid var(--panel-border);
+    background: rgb(24 24 27 / 0.6);
+    border-radius: 999px;
+    padding: 0.3rem;
+    font-size: 0.75rem;
+  }
+  .stage .pill span {
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    color: var(--muted);
+  }
+  .stage .pill span.active {
+    background: var(--accent);
+    color: #18181b;
+    font-weight: 600;
+    transition: background 0.4s ease;
+  }
+
+  .section-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--panel-border);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2.25rem;
+  }
+  .card {
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 0.9rem 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .card.selected { border-color: var(--card-accent); }
+  .card .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: var(--card-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+  .card .name {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .card .range {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .card .today-flag {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--card-accent);
+    color: #18181b;
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    font-weight: 700;
+  }
+
+  .note {
+    font-size: 0.8rem;
+    color: var(--muted);
+    border-top: 1px solid var(--panel-border);
+    padding-top: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .note code {
+    background: rgb(63 63 70 / 0.4);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+  }
+</style>
+
+<h1>Como a home muda em eventos especiais</h1>
+<p class="lede">
+  <code>getActiveEvent()</code> resolve por calendário — sazonal tem prioridade sobre a rotação semanal por gênero.
+  Clique em qualquer evento abaixo para ver a home com aquele tema aplicado (cor do badge, emoji e destaque).
+</p>
+
+<div class="stage" id="stage" style="--accent: #f59e0b">
+  <div class="logo">📚 LivreLee</div>
+  <p class="tagline">Adivinhe livros de 23 formas diferentes. Sem cadastro — é só jogar.</p>
+  <div class="badge" id="badge">
+    <span class="emoji" id="badge-emoji">📅</span>
+    <span id="badge-text">Evento ativo: —</span>
+  </div>
+  <div class="pill">
+    <span class="active">Todos os idiomas</span>
+    <span>Português</span>
+    <span>Inglês</span>
+  </div>
+</div>
+
+<p class="section-label">Rotação semanal (por gênero, gira toda semana ISO)</p>
+<div class="grid" id="weekly-grid"></div>
+
+<p class="section-label">Sazonais (data fixa — têm prioridade sobre a semanal quando ativos)</p>
+<div class="grid" id="seasonal-grid"></div>
+
+<p class="note">
+  Fonte de verdade: <code>src/lib/events.ts</code>. Hoje (<span id="today-label"></span>) o evento ativo real é
+  <strong id="today-event"></strong> — marcado com o selo "hoje" abaixo.
+</p>
+
+<script>
+  const WEEKLY = [
+    { slug: "semana-fantasia", name: "Semana da Fantasia", emoji: "🧙", theme: "#a855f7" },
+    { slug: "semana-romance", name: "Semana do Romance", emoji: "❤️", theme: "#ec4899" },
+    { slug: "semana-ficcao-cientifica", name: "Semana da Ficção Científica", emoji: "🚀", theme: "#38bdf8" },
+    { slug: "semana-terror", name: "Semana do Terror", emoji: "👻", theme: "#22c55e" },
+    { slug: "semana-misterio", name: "Semana do Mistério", emoji: "🕵️", theme: "#eab308" },
+    { slug: "semana-classicos", name: "Semana dos Clássicos", emoji: "📚", theme: "#f59e0b" },
+    { slug: "semana-brasil", name: "Semana da Literatura Brasileira", emoji: "🇧🇷", theme: "#16a34a" },
+  ];
+  const SEASONAL = [
+    { slug: "halloween", name: "Halloween", emoji: "🎃", theme: "#f97316", range: "25–31 out" },
+    { slug: "dia-das-criancas", name: "Dia das Crianças", emoji: "🧸", theme: "#38bdf8", range: "12 out" },
+    { slug: "black-friday", name: "Black Friday", emoji: "🛍️", theme: "#111827", range: "24–30 nov" },
+    { slug: "natal", name: "Natal", emoji: "🎄", theme: "#dc2626", range: "20–26 dez" },
+    { slug: "ano-novo", name: "Ano Novo", emoji: "🎆", theme: "#eab308", range: "30–31 dez" },
+    { slug: "dia-mundial-do-livro", name: "Dia Mundial do Livro", emoji: "📖", theme: "#f59e0b", range: "23 abr" },
+  ];
+
+  function isoWeek(d) {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = (date.getUTCDay() + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - dayNum + 3);
+    const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+    return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * 86400000));
+  }
+
+  const SEASONAL_RANGES = {
+    halloween: [10, 25, 31], "dia-das-criancas": [10, 12, 12], "black-friday": [11, 24, 30],
+    natal: [12, 20, 26], "ano-novo": [12, 30, 31], "dia-mundial-do-livro": [4, 23, 23],
+  };
+
+  function activeEventNow() {
+    const now = new Date();
+    const month = now.getMonth() + 1, day = now.getDate();
+    for (const s of SEASONAL) {
+      const [m, from, to] = SEASONAL_RANGES[s.slug];
+      if (m === month && day >= from && day <= to) return s;
+    }
+    return WEEKLY[isoWeek(now) % WEEKLY.length];
+  }
+
+  function renderStage(ev) {
+    const stage = document.getElementById("stage");
+    stage.style.setProperty("--accent", ev.theme);
+    document.getElementById("badge-emoji").textContent = ev.emoji;
+    document.getElementById("badge-text").textContent = "Evento ativo: " + ev.name;
+  }
+
+  function card(ev, extra) {
+    const btn = document.createElement("button");
+    btn.className = "card";
+    btn.style.setProperty("--card-accent", ev.theme);
+    btn.innerHTML =
+      '<span class="swatch">' + ev.emoji + "</span>" +
+      '<span class="name">' + ev.name + "</span>" +
+      (extra ? '<span class="range">' + extra + "</span>" : "");
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".card.selected").forEach((c) => c.classList.remove("selected"));
+      btn.classList.add("selected");
+      renderStage(ev);
+    });
+    return btn;
+  }
+
+  const today = activeEventNow();
+  const weeklyGrid = document.getElementById("weekly-grid");
+  const seasonalGrid = document.getElementById("seasonal-grid");
+
+  WEEKLY.forEach((ev) => weeklyGrid.appendChild(card(ev)));
+  SEASONAL.forEach((ev) => seasonalGrid.appendChild(card(ev, ev.range)));
+
+  document.querySelectorAll(".card").forEach((c) => {
+    if (c.querySelector(".name").textContent === today.name) {
+      const flag = document.createElement("span");
+      flag.className = "today-flag";
+      flag.textContent = "hoje";
+      c.appendChild(flag);
+      c.classList.add("selected");
+    }
+  });
+
+  document.getElementById("today-label").textContent = new Date().toLocaleDateString("pt-BR");
+  document.getElementById("today-event").textContent = today.name;
+  renderStage(today);
+</script>

@@ -8,6 +8,8 @@ import {
   Calendar,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clapperboard,
   Clock,
   Crown,
@@ -18,16 +20,20 @@ import {
   Gem,
   Globe,
   Hash,
+  HelpCircle,
   Hourglass,
+  Image as ImageIcon,
   Infinity as InfinityIcon,
+  Library,
   Medal,
   MessageCircle,
   MessageSquareQuote,
   Moon,
   PenLine,
   Quote,
+  RotateCcw,
   ScrollText,
-  Search,
+  Share2,
   Shuffle,
   Smile,
   Sparkles,
@@ -53,7 +59,20 @@ import {
  * estes ícones para uma aparência consistente entre plataformas.
  */
 
-export { ArrowLeft, Trophy, Globe, Zap, CheckCircle2, Flame, Award };
+export {
+  ArrowLeft,
+  Trophy,
+  Globe,
+  Zap,
+  CheckCircle2,
+  Flame,
+  Award,
+  ChevronUp,
+  ChevronDown,
+  RotateCcw,
+  Share2,
+  TrendingUp,
+};
 
 export const MODE_ICONS: Record<string, LucideIcon> = {
   daily: Calendar,
@@ -83,7 +102,10 @@ export const MODE_ICONS: Record<string, LucideIcon> = {
 
 export const GROUP_ICONS: Record<string, LucideIcon> = {
   comparação: Target,
-  pistas: Search,
+  frases: Quote,
+  livro: Library,
+  "outras-pistas": HelpCircle,
+  capa: ImageIcon,
   autor: PenLine,
   especial: Sparkles,
 };

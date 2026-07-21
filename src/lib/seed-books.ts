@@ -5,8 +5,11 @@ import type { Book } from "./types";
  * configurado (sem NEXT_PUBLIC_SUPABASE_URL no .env), para o jogo rodar
  * de ponta a ponta em desenvolvimento. Em produção os livros vêm do banco.
  *
- * As capas usam a Open Library Covers API (por ISBN), então os modos visuais
- * (capa/blur/silhueta) funcionam mesmo offline.
+ * As capas usam a Open Library Covers API, então os modos visuais
+ * (capa/blur/silhueta) funcionam mesmo offline. Usamos o id de capa
+ * (`/b/id/<cover_i>`) em vez de ISBN nos casos em que o ISBN informado batia
+ * com a edição errada (ex.: Capitães da Areia apontava para uma antologia de
+ * Vinicius de Moraes) — sempre confira o título antes de trocar uma capa.
  */
 export const SEED_BOOKS: Book[] = [
   {
@@ -20,7 +23,7 @@ export const SEED_BOOKS: Book[] = [
     genre: "Romance",
     subgenre: "Realismo",
     pages: 256,
-    cover_url: "https://covers.openlibrary.org/b/isbn/9788525406958-L.jpg",
+    cover_url: "https://covers.openlibrary.org/b/id/647501-L.jpg",
     description:
       "Bentinho narra sua história com Capitú e a dúvida que o consome: teria ela o traído com seu melhor amigo?",
     popularity: 95,
@@ -134,7 +137,7 @@ export const SEED_BOOKS: Book[] = [
     genre: "Romance",
     subgenre: "Regionalismo",
     pages: 608,
-    cover_url: "https://covers.openlibrary.org/b/isbn/9788520925157-L.jpg",
+    cover_url: "https://covers.openlibrary.org/b/id/13909068-L.jpg",
     description:
       "O jagunço Riobaldo narra sua vida no sertão, seu amor por Diadorim e um possível pacto com o diabo.",
     popularity: 80,
@@ -153,7 +156,7 @@ export const SEED_BOOKS: Book[] = [
     genre: "Romance",
     subgenre: "Social",
     pages: 288,
-    cover_url: "https://covers.openlibrary.org/b/isbn/9788535914085-L.jpg",
+    cover_url: "https://covers.openlibrary.org/b/id/4178919-L.jpg",
     description:
       "A vida de um grupo de meninos de rua em Salvador, entre pequenos crimes, amizade e sonhos.",
     popularity: 85,

@@ -21,7 +21,7 @@ export interface Book {
   tags: string[];
 }
 
-/** Resultado da comparação de um campo (estilo Loldle). */
+/** Resultado da comparação de um campo. */
 export type Cmp = "correct" | "partial" | "wrong";
 
 export interface NumericCmp {
@@ -30,7 +30,7 @@ export interface NumericCmp {
   dir: "up" | "down" | null;
 }
 
-/** Comparação de um palpite de LIVRO (grade estilo Loldle). */
+/** Comparação de um palpite de LIVRO (grade de atributos). */
 export interface GuessFeedback {
   won: boolean;
   guess: {
@@ -68,7 +68,7 @@ export interface Author {
   book_count: number;
 }
 
-/** Comparação de um palpite de AUTOR (grade estilo Loldle). */
+/** Comparação de um palpite de AUTOR (grade de atributos). */
 export interface AuthorGuessFeedback {
   won: boolean;
   guess: {
