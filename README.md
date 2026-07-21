@@ -39,6 +39,14 @@ grant select, insert on public.daily_challenges to anon, authenticated;
 grant select, insert on public.scores to anon, authenticated;
 ```
 
+**Se os jobs de ingestão (`node scripts/run-jobs.mjs ...` ou o GitHub Action) derem "permission denied for table books"**: mesma causa, mas para a `service_role` — ela ignora RLS, mas ainda precisa do `GRANT` de tabela (é uma camada separada). Rode:
+
+```sql
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+```
+
 Depois de rodar, force o PostgREST a recarregar o cache de permissões (senão o efeito só aparece minutos depois):
 
 ```sql
@@ -74,6 +82,17 @@ node scripts/run-jobs.mjs            # roda o conjunto padrão (openlibrary + go
 - `quotes` — primeira/última frase (modos Primeira Frase/Última Frase) via Project Gutenberg, **só para livros em domínio público**: como o Gutenberg só distribui obras com copyright expirado, extrair a 1ª/última frase do texto integral não tem o risco jurídico de raspar trechos de livro protegido. Citação "famosa" (modo Frase) e fala de personagem continuam manuais — exigem julgamento humano sobre relevância, não só posição no texto.
 - `sales` — preenche `sales_estimate` com o número de cópias vendidas citado no resumo da Wikipedia do livro (ex. "sold over 120 million copies"). Não é uma estimativa inventada, mas também não é verificada por curadoria — é o número que a própria Wikipedia relata, com a precisão/atualidade que ela tiver. Decisão consciente do projeto: sem isso, o modo **Vendas** ficaria restrito aos 12 livros do dataset local.
 - `recalc-rankings` — stub registrado no runner, sem fonte configurada.
+
+**Esses jobs não rodam sozinhos** — são scripts Node soltos, ninguém os agenda automaticamente (os únicos crons reais do projeto são `/api/cron/daily` e `/api/cron/events`, ver [vercel.json](vercel.json), e cuidam só do desafio do dia/evento ativo). Pra rodar continuamente, tem um workflow do GitHub Actions pronto em [.github/workflows/ingestion-jobs.yml](.github/workflows/ingestion-jobs.yml):
+
+- Roda 1x/dia às 04:00 UTC (uma hora depois do cron do desafio diário), com o conjunto completo de jobs.
+- Também roda sob demanda: aba **Actions → Jobs de ingestão → Run workflow**, com a opção de escolher só alguns jobs (ex. `covers` para testar isolado).
+- Precisa de 3 *repository secrets* (**Settings → Secrets and variables → Actions → New repository secret**):
+  - `SUPABASE_URL` — mesma URL do `.env.local`
+  - `SUPABASE_SERVICE_ROLE_KEY` — a service role key (nunca a anon/publishable)
+  - `GOOGLE_BOOKS_KEY` — opcional, só se quiser volume maior na API do Google Books
+
+GitHub Actions foi escolhido em vez de um cron na Vercel chamando uma API route porque os jobs de Wikidata/Gutenberg fazem várias chamadas sequenciais com pausas entre elas (educadas com as APIs públicas) — isso passa fácil do timeout de função serverless da Vercel, e o Actions não tem esse limite.
 
 ### Sorteio do livro diário
 

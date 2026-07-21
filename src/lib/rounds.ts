@@ -40,12 +40,13 @@ function pickFrom<T>(list: T[], daily: boolean, key: string): T {
 
 // ------------------------------- livros ----------------------------------
 
-async function eligibleBooks(requires?: ModeDef["requires"], lang: LangFilter = "all"): Promise<Book[]> {
+async function eligibleBooks(requires?: ModeDef["requires"], lang: LangFilter = "all", genre?: string): Promise<Book[]> {
   if (supabaseConfigured()) {
     const supabase = await createClient();
     let q = supabase.from("books").select("*").limit(5000);
     if (requires) q = q.not(requires, "is", null);
     if (lang !== "all") q = q.eq("language", LANG_LABEL[lang]);
+    if (genre) q = q.eq("genre", genre);
     const { data } = await q;
     return (data ?? []).map(normalizeBook);
   }
@@ -53,13 +54,14 @@ async function eligibleBooks(requires?: ModeDef["requires"], lang: LangFilter = 
   if (requires === "cover_url") books = books.filter((b) => b.cover_url);
   if (requires === "description") books = books.filter((b) => b.description);
   if (lang !== "all") books = books.filter((b) => b.language === LANG_LABEL[lang]);
+  if (genre) books = books.filter((b) => b.genre === genre);
   return books;
 }
 
-/** Ids de livros elegíveis para o filtro de idioma (null = sem filtro). */
-async function allowedBookIds(lang: LangFilter): Promise<Set<number> | null> {
-  if (lang === "all") return null;
-  const books = await eligibleBooks(undefined, lang);
+/** Ids de livros elegíveis para os filtros de idioma/gênero (null = sem filtro nenhum). */
+async function allowedBookIds(lang: LangFilter, genre?: string): Promise<Set<number> | null> {
+  if (lang === "all" && !genre) return null;
+  const books = await eligibleBooks(undefined, lang, genre);
   return new Set(books.map((b) => b.id));
 }
 
@@ -69,11 +71,12 @@ function normalizeBook(row: Record<string, unknown>): Book {
   return { ...b, tags: b.tags ?? [] };
 }
 
-async function pickBook(mode: ModeDef, daily: boolean, date: string, lang: LangFilter): Promise<Book> {
-  // O modo "daily" usa a tabela daily_challenges (sem repetição + ranking).
+async function pickBook(mode: ModeDef, daily: boolean, date: string, lang: LangFilter, genre?: string): Promise<Book> {
+  // O modo "daily" usa a tabela daily_challenges (sem repetição + ranking) —
+  // não recebe o filtro de gênero do evento pra não mexer nesse invariante.
   if (mode.id === "daily") return getDailyBook(lang);
 
-  const books = await eligibleBooks(mode.requires, lang);
+  const books = await eligibleBooks(mode.requires, lang, genre);
   if (books.length === 0) throw new NoContentError("nenhum livro elegível");
   return pickFrom(books, daily, `${mode.id}:${date}`);
 }
@@ -179,43 +182,43 @@ function filterByAllowedBooks<T extends { book_id: number }>(list: T[], allowed:
   return allowed ? list.filter((item) => allowed.has(item.book_id)) : list;
 }
 
-async function pickQuote(kind: QuoteRow["kind"], daily: boolean, key: string, lang: LangFilter): Promise<QuoteRow> {
+async function pickQuote(kind: QuoteRow["kind"], daily: boolean, key: string, lang: LangFilter, genre?: string): Promise<QuoteRow> {
   const raw = supabaseConfigured()
     ? await fetchContent<QuoteRow>("quotes", ["kind", kind])
     : SEED_QUOTES.filter((q) => q.kind === kind);
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang));
+  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
   if (list.length === 0) throw new NoContentError(`sem frases (${kind})`);
   return pickFrom(list, daily, key);
 }
 
-async function pickCharacter(daily: boolean, key: string, lang: LangFilter): Promise<CharacterRow> {
+async function pickCharacter(daily: boolean, key: string, lang: LangFilter, genre?: string): Promise<CharacterRow> {
   const raw = supabaseConfigured() ? await fetchContent<CharacterRow>("characters") : SEED_CHARACTERS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang));
+  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
   if (list.length === 0) throw new NoContentError("sem personagens");
   return pickFrom(list, daily, key);
 }
 
-async function pickChapter(daily: boolean, key: string, lang: LangFilter) {
+async function pickChapter(daily: boolean, key: string, lang: LangFilter, genre?: string) {
   const raw = supabaseConfigured()
     ? await fetchContent<{ book_id: number; name: string }>("chapters")
     : SEED_CHAPTERS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang));
+  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
   if (list.length === 0) throw new NoContentError("sem capítulos");
   return pickFrom(list, daily, key);
 }
 
-async function pickAdaptation(daily: boolean, key: string, lang: LangFilter): Promise<AdaptationRow> {
+async function pickAdaptation(daily: boolean, key: string, lang: LangFilter, genre?: string): Promise<AdaptationRow> {
   const raw = supabaseConfigured() ? await fetchContent<AdaptationRow>("adaptations") : SEED_ADAPTATIONS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang));
+  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
   if (list.length === 0) throw new NoContentError("sem adaptações");
   return pickFrom(list, daily, key);
 }
 
-async function pickEmoji(daily: boolean, key: string, lang: LangFilter) {
+async function pickEmoji(daily: boolean, key: string, lang: LangFilter, genre?: string) {
   const raw = supabaseConfigured()
     ? await fetchContent<{ book_id: number; emoji: string }>("book_emojis")
     : SEED_EMOJIS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang));
+  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
   if (list.length === 0) throw new NoContentError("sem emojis");
   return pickFrom(list, daily, key);
 }
@@ -230,15 +233,24 @@ export interface BuiltRound {
 /**
  * Monta a pista + a resposta (assinável) de um modo já resolvido (não-Mixed).
  * Lança NoContentError quando o modo depende de conteúdo ainda inexistente
- * (inclusive quando o filtro de idioma zera o acervo elegível).
+ * (inclusive quando o filtro de idioma/gênero zera o acervo elegível).
+ *
+ * `genre` vem do evento semanal/sazonal ativo (ver getActiveEvent().filterGenre
+ * em src/lib/events.ts) — restringe o acervo elegível ao tema da semana em
+ * todo modo derivado de livro. Não se aplica ao modo "daily" (ver pickBook).
  */
-export async function buildRound(mode: ModeDef, daily: boolean, lang: LangFilter = "all"): Promise<BuiltRound> {
+export async function buildRound(
+  mode: ModeDef,
+  daily: boolean,
+  lang: LangFilter = "all",
+  genre?: string
+): Promise<BuiltRound> {
   const date = todayKey();
   const key = `${mode.id}:${date}`;
 
   switch (mode.source) {
     case "book": {
-      const book = await pickBook(mode, daily, date, lang);
+      const book = await pickBook(mode, daily, date, lang, genre);
       // Author Mode: mostra o título, resposta é o autor.
       if (mode.guessType === "author") {
         return {
@@ -261,14 +273,14 @@ export async function buildRound(mode: ModeDef, daily: boolean, lang: LangFilter
     case "quote:closing":
     case "quote:character": {
       const kind = mode.source.split(":")[1] as QuoteRow["kind"];
-      const q = await pickQuote(kind, daily, key, lang);
+      const q = await pickQuote(kind, daily, key, lang, genre);
       const clue: Record<string, unknown> = { text: q.text };
       if (kind === "quote") clue.context = q.context;
       if (kind === "character") clue.hint = "Alguém disse isto.";
       return { clue, answer: { m: mode.id, b: q.book_id, d: daily ? date : undefined } };
     }
     case "character": {
-      const c = await pickCharacter(daily, key, lang);
+      const c = await pickCharacter(daily, key, lang, genre);
       const clue =
         mode.clueType === "character-name"
           ? { name: c.name }
@@ -276,18 +288,18 @@ export async function buildRound(mode: ModeDef, daily: boolean, lang: LangFilter
       return { clue, answer: { m: mode.id, b: c.book_id, d: daily ? date : undefined } };
     }
     case "chapter": {
-      const c = await pickChapter(daily, key, lang);
+      const c = await pickChapter(daily, key, lang, genre);
       return { clue: { chapter: c.name }, answer: { m: mode.id, b: c.book_id, d: daily ? date : undefined } };
     }
     case "adaptation": {
-      const a = await pickAdaptation(daily, key, lang);
+      const a = await pickAdaptation(daily, key, lang, genre);
       return {
         clue: { title: a.title, kind: a.kind, year: a.year },
         answer: { m: mode.id, b: a.book_id, d: daily ? date : undefined },
       };
     }
     case "emoji": {
-      const e = await pickEmoji(daily, key, lang);
+      const e = await pickEmoji(daily, key, lang, genre);
       return { clue: { emoji: e.emoji }, answer: { m: mode.id, b: e.book_id, d: daily ? date : undefined } };
     }
   }

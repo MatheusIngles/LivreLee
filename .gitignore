@@ -44,5 +44,8 @@ next-env.d.ts
 CLAUDE.md
 .claude/
 
-# supabase (migrações/SQL)
+# arquivos de rascunho/demonstração (não fazem parte do app)
+/scratch/
+
+# supabase (schema + seed com dados do acervo — mantidos só localmente)
 /supabase/

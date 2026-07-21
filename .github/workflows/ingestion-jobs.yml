@@ -1,0 +1,40 @@
+name: Jobs de ingestão
+
+# Os jobs de dados (scripts/run-jobs.mjs) não têm nenhum agendamento próprio —
+# são scripts Node soltos, pensados pra rodar manualmente ou por CI. Este
+# workflow os roda 1x/dia, uma hora depois do cron que sorteia o desafio
+# diário (03:00 UTC, ver vercel.json), pra dar tempo do acervo já estar
+# atualizado quando o dia começar.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: "Jobs a rodar (nomes separados por espaço, ver: node scripts/run-jobs.mjs --list)"
+        required: false
+        default: "openlibrary google-books covers characters adaptations quotes sales"
+
+jobs:
+  run-jobs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rodar jobs de ingestão
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_BOOKS_KEY: ${{ secrets.GOOGLE_BOOKS_KEY }}
+        run: >
+          node scripts/run-jobs.mjs
+          ${{ github.event.inputs.jobs || 'openlibrary google-books covers characters adaptations quotes sales' }}

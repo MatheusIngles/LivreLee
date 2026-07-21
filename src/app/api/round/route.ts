@@ -28,10 +28,13 @@ export async function GET(req: NextRequest) {
   }
 
   const daily = resolved.id === "daily" || req.nextUrl.searchParams.get("daily") === "1";
+  const event = getActiveEvent();
+  // O modo "daily" tem seleção própria (sem repetição + ranking, ver data.ts) —
+  // não recebe o filtro de gênero do evento pra não mexer nesse invariante.
+  const genre = resolved.id === "daily" ? undefined : event.filterGenre;
 
   try {
-    const { clue, answer } = await buildRound(resolved, daily, lang);
-    const event = getActiveEvent();
+    const { clue, answer } = await buildRound(resolved, daily, lang, genre);
     const payload: RoundPayload = {
       mode: resolved.id,
       token: signRound(answer),
