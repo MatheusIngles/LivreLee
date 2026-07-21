@@ -1,5 +1,7 @@
 # 📚 LivreLee
 
+🇧🇷 Português | [🇺🇸 English](README.en.md)
+
 Jogo diário de adivinhação de livros, estilo Wordle. 23 modos diferentes de descobrir o livro — grade de atributos, frases, emoji, capa, "maior ou menor" entre duas cartas e mais. Sem cadastro: tudo funciona com um id anônimo salvo no navegador.
 
 ## Stack
@@ -24,6 +26,102 @@ Sem configurar nada, o app roda com um dataset local de 12 livros ([src/lib/seed
 2. No SQL Editor, rode [supabase/schema.sql](supabase/schema.sql) e depois [supabase/seed.sql](supabase/seed.sql) (~1000 livros reais, gerado — veja abaixo)
 3. Copie `.env.example` para `.env.local` e preencha com as chaves do projeto (Settings → API). O painel às vezes chama a chave pública de "anon key", às vezes de "publishable key" — o app aceita as duas variáveis, use a que aparecer no seu painel
 4. Reinicie o `npm run dev` — os dados passam a vir do banco
+
+### Schema do banco
+
+Todo o conteúdo do jogo gira em torno de `books`; o resto são tabelas satélites ligadas por `book_id`. `daily_challenges` fixa o desafio do dia (por modo/idioma) apontando pra um livro e, quando o modo depende de uma pista específica, também pra uma citação ou personagem. `events`, `scores` e `achievements` não têm FK — são catálogos/registros independentes. Definição completa em [supabase/schema.sql](supabase/schema.sql) (mantido só localmente, não versionado — ver `.gitignore`).
+
+```mermaid
+erDiagram
+    books ||--o{ quotes : book_id
+    books ||--o{ characters : book_id
+    books ||--o{ chapters : book_id
+    books ||--o{ adaptations : book_id
+    books ||--o{ book_emojis : book_id
+    books ||--o{ daily_challenges : book_id
+    quotes ||--o{ daily_challenges : quote_id
+    characters ||--o{ daily_challenges : character_id
+
+    books {
+        bigint id PK
+        text title
+        text author
+        int year
+        text country
+        text language
+        text genre
+        int pages
+        text cover_url
+        text description
+        numeric sales_estimate
+        text_array tags
+        text series
+        text source
+        text source_key
+    }
+    quotes {
+        bigint id PK
+        bigint book_id FK
+        text text
+        text kind "quote | opening | closing | character"
+        text speaker
+        text chapter
+        int page
+    }
+    characters {
+        bigint id PK
+        bigint book_id FK
+        text name
+        text description
+    }
+    chapters {
+        bigint id PK
+        bigint book_id FK
+        text name
+        int ordinal
+    }
+    adaptations {
+        bigint id PK
+        bigint book_id FK
+        text title
+        text kind "filme | série | peça | jogo"
+        int year
+    }
+    book_emojis {
+        bigint id PK
+        bigint book_id FK
+        text emoji
+    }
+    daily_challenges {
+        bigint id PK
+        date challenge_date
+        text mode "daily | daily-pt | daily-en"
+        bigint book_id FK
+        bigint quote_id FK
+        bigint character_id FK
+    }
+    events {
+        bigint id PK
+        text slug
+        text name
+        text kind "weekly | seasonal"
+        boolean active
+    }
+    scores {
+        bigint id PK
+        uuid client_id
+        text mode
+        date challenge_date
+        int guesses
+        boolean won
+    }
+    achievements {
+        bigint id PK
+        text slug
+        text name
+        int xp
+    }
+```
 
 **Se a busca/palpite der erro "permission denied for table ..."**: faltam os `GRANT` de tabela para os papéis `anon`/`authenticated` — RLS sozinho não libera acesso. Isso acontece se você rodou uma versão antiga do `schema.sql` antes dos grants existirem. Rode direto no SQL Editor:
 
@@ -188,5 +286,5 @@ supabase/
 
 ## Roadmap
 
-- **Feito:** 23 modos (2 mecânicas), diário sem repetição, conquistas, eventos sazonais, i18n PT/EN, filtro de idioma do acervo, ranking anônimo sem contas
-- **Próximos:** jobs de citações/personagens/adaptações/vendas (hoje são stubs no runner), painel admin de curadoria, app Android (Capacitor), premium
+- **Feito:** 23 modos (2 mecânicas), diário sem repetição, conquistas, eventos sazonais, i18n PT/EN, filtro de idioma do acervo, ranking anônimo sem contas, jobs de characters/adaptations/covers (Wikidata/Open Library), quotes de domínio público (Gutenberg), sales via Wikipedia, workflow de CI (GitHub Actions) pros jobs, filtro de gênero dos eventos ligado ao sorteio
+- **Próximos:** `recalc-rankings` (ainda stub, sem fonte definida), painel admin de curadoria, app Android (Capacitor), premium
