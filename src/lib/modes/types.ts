@@ -31,10 +31,8 @@ export type ClueType =
   | "cover-silhouette"
   | "synopsis"
   | "tags"
-  | "quote"
   | "opening"
   | "closing"
-  | "character-quote"
   | "character-name"
   | "character-desc"
   | "chapter"
@@ -44,10 +42,8 @@ export type ClueType =
 /** De onde o servidor tira o alvo e a pista da rodada. */
 export type SourceKind =
   | "book"
-  | "quote:quote"
   | "quote:opening"
   | "quote:closing"
-  | "quote:character"
   | "character"
   | "chapter"
   | "adaptation"

@@ -14,7 +14,7 @@ on:
       jobs:
         description: "Jobs a rodar (nomes separados por espaço, ver: node scripts/run-jobs.mjs --list)"
         required: false
-        default: "openlibrary google-books covers characters adaptations quotes sales"
+        default: "openlibrary google-books covers characters adaptations quotes chapters sales"
 
 jobs:
   run-jobs:
@@ -37,4 +37,4 @@ jobs:
           GOOGLE_BOOKS_KEY: ${{ secrets.GOOGLE_BOOKS_KEY }}
         run: >
           node scripts/run-jobs.mjs
-          ${{ github.event.inputs.jobs || 'openlibrary google-books covers characters adaptations quotes sales' }}
+          ${{ github.event.inputs.jobs || 'openlibrary google-books covers characters adaptations quotes chapters sales' }}

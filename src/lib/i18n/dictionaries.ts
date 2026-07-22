@@ -69,10 +69,8 @@ export interface Dictionary {
   };
   clue: {
     whoWrote: string;
-    famousQuote: string;
     firstLine: string;
     lastLine: string;
-    someoneSaid: string;
     whichBookCharacter: string;
     character: string;
     chapterName: string;
@@ -119,10 +117,8 @@ const modesPt: Record<string, ModeText> = {
   age: { name: "Idade do Livro", description: "Um livro é revelado; o próximo é mais antigo ou mais recente?", statLabel: "Publicado em" },
   pages: { name: "Número de Páginas", description: "Um livro é revelado; o próximo tem mais ou menos páginas?", statLabel: "Páginas" },
   sales: { name: "Vendas", description: "Um livro é revelado; o próximo vendeu mais ou menos cópias?", statLabel: "Cópias vendidas (milhões)" },
-  quote: { name: "Frase", description: "De qual livro é esta frase?" },
   opening: { name: "Primeira Frase", description: "Adivinhe o livro pela sua primeira frase." },
   closing: { name: "Última Frase", description: "Adivinhe o livro pela sua última frase." },
-  "character-quote": { name: "Fala de Personagem", description: "De qual livro é esta fala?" },
   character: { name: "Personagem", description: "Adivinhe o livro pela descrição de um personagem." },
   "book-by-character": { name: "Livro pelo Personagem", description: "Dado o nome de um personagem, qual é o livro?" },
   chapter: { name: "Capítulo", description: "Adivinhe o livro pelo nome de um capítulo." },
@@ -145,10 +141,8 @@ const modesEn: Record<string, ModeText> = {
   age: { name: "Book Age", description: "One book is revealed; is the next one older or newer?", statLabel: "Published in" },
   pages: { name: "Page Count", description: "One book is revealed; does the next one have more or fewer pages?", statLabel: "Pages" },
   sales: { name: "Sales", description: "One book is revealed; did the next one sell more or fewer copies?", statLabel: "Copies sold (millions)" },
-  quote: { name: "Quote", description: "Which book is this quote from?" },
   opening: { name: "Opening Line", description: "Guess the book by its opening line." },
   closing: { name: "Final Line", description: "Guess the book by its final line." },
-  "character-quote": { name: "Character Quote", description: "Which book is this line from?" },
   character: { name: "Character", description: "Guess the book from a character's description." },
   "book-by-character": { name: "Book by Character", description: "Given a character's name, which book is it?" },
   chapter: { name: "Chapter", description: "Guess the book by a chapter's name." },
@@ -293,10 +287,8 @@ export const dictionaries: Record<UiLocale, Dictionary> = {
     },
     clue: {
       whoWrote: "Quem escreveu?",
-      famousQuote: "Frase célebre",
       firstLine: "Primeira frase",
       lastLine: "Última frase",
-      someoneSaid: "Alguém disse…",
       whichBookCharacter: "De qual livro é este personagem?",
       character: "Personagem",
       chapterName: "Nome de um capítulo",
@@ -397,10 +389,8 @@ export const dictionaries: Record<UiLocale, Dictionary> = {
     },
     clue: {
       whoWrote: "Who wrote it?",
-      famousQuote: "Famous quote",
       firstLine: "Opening line",
       lastLine: "Final line",
-      someoneSaid: "Someone said…",
       whichBookCharacter: "Which book is this character from?",
       character: "Character",
       chapterName: "Name of a chapter",

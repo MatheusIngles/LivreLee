@@ -1,7 +1,6 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
+import Image from "next/image";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
 import type { ClueType } from "@/lib/modes/types";
 
@@ -24,8 +23,15 @@ function Box({ children }: { children: React.ReactNode }) {
 
 function CoverImage({ url, style }: { url: string; style: React.CSSProperties }) {
   return (
-    <div className="mx-auto aspect-[2/3] w-48 overflow-hidden rounded-lg bg-zinc-800">
-      <img src={url} alt="cover" className="h-full w-full object-cover transition-all duration-500" style={style} />
+    <div className="relative mx-auto aspect-[2/3] w-48 overflow-hidden rounded-lg bg-zinc-800">
+      <Image
+        src={url}
+        alt="cover"
+        fill
+        sizes="192px"
+        className="object-cover transition-all duration-500"
+        style={style}
+      />
     </div>
   );
 }
@@ -48,15 +54,11 @@ export default function Clue({ clueType, clue, attempts, maxGuesses }: Props) {
         </Box>
       );
 
-    case "quote":
     case "opening":
-    case "closing":
-    case "character-quote": {
+    case "closing": {
       const labels: Record<string, string> = {
-        quote: t.clue.famousQuote,
         opening: t.clue.firstLine,
         closing: t.clue.lastLine,
-        "character-quote": t.clue.someoneSaid,
       };
       return (
         <Box>
@@ -64,9 +66,6 @@ export default function Clue({ clueType, clue, attempts, maxGuesses }: Props) {
           <blockquote className="mt-3 text-xl font-medium italic leading-relaxed">
             “{String(clue.text ?? "")}”
           </blockquote>
-          {typeof clue.context === "string" && clue.context && (
-            <p className="mt-3 text-sm text-zinc-400">{clue.context}</p>
-          )}
         </Box>
       );
     }

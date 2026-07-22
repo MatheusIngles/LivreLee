@@ -1,7 +1,6 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { formatStat } from "@/lib/format-stat";
 import type { LangFilter } from "@/lib/lang";
@@ -10,6 +9,7 @@ import { loadEarnedAchievements, recordResult, saveEarnedAchievements } from "@/
 import { evaluateAchievements, type AchievementDef } from "@/lib/achievements";
 import { useI18n } from "@/lib/i18n/LocaleProvider";
 import { AchievementIcon, Flame, Share2, Trophy } from "@/components/icons";
+import Confetti from "@/components/Confetti";
 
 interface Card {
   id: number;
@@ -36,7 +36,7 @@ interface GuessResponse {
   nextRound: { token: string; current: CurrentCard; next: Card } | null;
 }
 
-type Phase = "loading" | "playing" | "revealed" | "error";
+type Phase = "loading" | "playing" | "checking" | "revealed" | "error";
 type Side = "current" | "next";
 
 const REVEAL_DELAY_MS = 1400;
@@ -49,6 +49,7 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
   const [state, setState] = useState<RoundState | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [lastCorrect, setLastCorrect] = useState(false);
+  const [pickedSide, setPickedSide] = useState<Side | null>(null);
   const [revealedValue, setRevealedValue] = useState<number | null>(null);
   const [bestStreak, setBestStreak] = useState(0);
   const [unlocked, setUnlocked] = useState<AchievementDef[]>([]);
@@ -88,7 +89,13 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
     // Clicar no card revelado = apostar que o oculto é MENOR; clicar no
     // oculto = apostar que ele é MAIOR. O clicado é sempre "quem eu acho maior".
     const guessDirection = side === "next" ? "higher" : "lower";
-    setPhase("revealed");
+    setPickedSide(side);
+    // Fase intermediária: desabilita os cards mas ainda não mostra resultado
+    // nenhum — só vira "revealed" quando o resultado REAL chegar, junto com
+    // os dados. Sem isso, o React chegava a renderizar "revealed" com o
+    // lastCorrect da rodada ANTERIOR (que só é sobrescrito depois que o
+    // fetch resolve), piscando a animação errada por uma fração de segundo.
+    setPhase("checking");
     try {
       const res = await fetch(`/api/compare/guess?lang=${lang}`, {
         method: "POST",
@@ -100,6 +107,7 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
       setLastCorrect(data.correct);
       setRevealedValue(data.actualValue);
       setBestStreak((b) => Math.max(b, data.streak));
+      setPhase("revealed");
 
       if (data.correct) {
         recordAndUnlock(true, 1);
@@ -133,11 +141,11 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
   }
 
   if (phase === "loading" && !state) {
-    return <p className="text-center text-zinc-500">{t.compare.loadingRound}</p>;
+    return <RoundSkeleton label={t.compare.loadingRound} />;
   }
   if (phase === "error" || !state) {
     return (
-      <p className="rounded-xl border border-red-800 bg-red-950/40 p-4 text-center text-red-300">
+      <p className="animate-pop-in rounded-xl border border-red-800 bg-red-950/40 p-4 text-center text-red-300">
         {t.compare.notEnoughBooks}
       </p>
     );
@@ -172,7 +180,8 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="relative grid grid-cols-2 gap-4">
+        {phase === "revealed" && lastCorrect && <Confetti />}
         <BookCard
           card={state.current}
           value={formatStat(statKey, state.current.value)}
@@ -181,15 +190,17 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
           clickable={phase === "playing"}
           onClick={() => pickSide("current")}
           biggerBadge={t.compare.biggerBadge}
+          shake={phase === "revealed" && !lastCorrect && pickedSide === "current"}
         />
         <BookCard
           card={state.next}
-          value={phase === "playing" ? "?" : formatStat(statKey, revealedValue ?? 0)}
+          value={phase === "revealed" ? formatStat(statKey, revealedValue ?? 0) : "?"}
           label={statLabel}
           status={statusFor(state.next.id)}
           clickable={phase === "playing"}
           onClick={() => pickSide("next")}
           biggerBadge={t.compare.biggerBadge}
+          shake={phase === "revealed" && !lastCorrect && pickedSide === "next"}
         />
       </div>
 
@@ -198,7 +209,10 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
       )}
 
       {phase === "revealed" && (
-        <p className={`mt-4 text-center font-semibold ${lastCorrect ? "text-emerald-400" : "text-red-400"}`}>
+        <p
+          key={lastCorrect ? "correct" : "wrong"}
+          className={`animate-pop-in mt-4 text-center font-semibold ${lastCorrect ? "text-emerald-400" : "text-red-400"}`}
+        >
           {lastCorrect ? t.compare.correct : t.compare.wrongContinues}
         </p>
       )}
@@ -222,6 +236,27 @@ export default function CompareGame({ mode, lang }: { mode: ModeDef; lang: LangF
   );
 }
 
+/** Layout de espera enquanto a rodada (par de livros) ainda não chegou. */
+function RoundSkeleton({ label }: { label: string }) {
+  return (
+    <div>
+      <div className="mb-4 flex justify-center">
+        <div className="h-5 w-40 animate-pulse rounded-full bg-zinc-800" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex flex-col items-center rounded-2xl border border-zinc-700 bg-zinc-900/60 p-4">
+            <div className="aspect-[2/3] w-full max-w-32 animate-pulse rounded-lg bg-zinc-800" />
+            <div className="mt-3 h-4 w-24 animate-pulse rounded bg-zinc-800" />
+            <div className="mt-2 h-3 w-16 animate-pulse rounded bg-zinc-800" />
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 text-center text-sm text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
 function BookCard({
   card,
   value,
@@ -230,6 +265,7 @@ function BookCard({
   clickable,
   onClick,
   biggerBadge,
+  shake = false,
 }: {
   card: Card;
   value: string;
@@ -238,11 +274,10 @@ function BookCard({
   clickable: boolean;
   onClick: () => void;
   biggerBadge: string;
+  shake?: boolean;
 }) {
-  const ring =
-    status === "answer" || status === "tie"
-      ? "border-emerald-500 ring-2 ring-emerald-500/40"
-      : "border-zinc-700";
+  const isWinner = status === "answer" || status === "tie";
+  const ring = isWinner ? "border-emerald-500 ring-2 ring-emerald-500/40" : "border-zinc-700";
   return (
     <button
       type="button"
@@ -250,7 +285,7 @@ function BookCard({
       disabled={!clickable}
       className={`flex flex-col items-center rounded-2xl border bg-zinc-900/60 p-4 text-center transition ${ring} ${
         clickable ? "cursor-pointer hover:border-amber-400 hover:bg-zinc-900" : "cursor-default"
-      }`}
+      } ${isWinner ? "animate-glow-correct" : ""} ${shake ? "animate-shake" : ""}`}
     >
       <div className="relative aspect-[2/3] w-full max-w-32 overflow-hidden rounded-lg bg-zinc-800">
         <CoverThumb key={card.id} title={card.title} author={card.author} coverUrl={card.cover_url} />
@@ -310,10 +345,12 @@ function CoverThumb({
   return (
     <>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-zinc-700" />}
-      <img
+      <Image
         src={src}
         alt={title}
-        className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        fill
+        sizes="128px"
+        className={`object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
       />

@@ -15,6 +15,7 @@ import * as covers from "./jobs/covers.mjs";
 import * as characters from "./jobs/characters.mjs";
 import * as adaptations from "./jobs/adaptations.mjs";
 import * as quotes from "./jobs/quotes.mjs";
+import * as chapters from "./jobs/chapters.mjs";
 import * as sales from "./jobs/sales.mjs";
 
 /** Job ainda sem fonte configurada: registrado, à espera de implementação. */
@@ -35,6 +36,7 @@ const JOBS = {
   characters: { description: "Personagens principais via Wikidata (P674).", run: characters.run },
   adaptations: { description: "Adaptações (filme/série/...) via Wikidata (P144).", run: adaptations.run },
   quotes: { description: "1ª/última frase via Project Gutenberg (só domínio público).", run: quotes.run },
+  chapters: { description: "Nomes de capítulo via sumário do Project Gutenberg (só domínio público).", run: chapters.run },
   sales: { description: "sales_estimate via menção de vendas no resumo da Wikipedia.", run: sales.run },
   "recalc-rankings": todoJob("Recalcular rankings"),
 };

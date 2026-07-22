@@ -1,6 +1,5 @@
 // Job: primeira/última frase (kind "opening"/"closing") para livros em
-// DOMÍNIO PÚBLICO, extraídas do texto integral via Project Gutenberg
-// (Gutendex, https://gutendex.com — API pública de metadados do Gutenberg).
+// DOMÍNIO PÚBLICO, extraídas do texto integral via Project Gutenberg.
 //
 // Diferente de citações "famosas" (kind "quote"/"character"), que exigem
 // julgamento humano sobre relevância e continuam curadas manualmente, a
@@ -10,57 +9,39 @@
 //
 // Incremental: só processa livros que ainda não têm quote "opening"/"closing".
 
-import { fetchJson, sleep, log, warn } from "./lib.mjs";
+import { sleep, log, warn } from "./lib.mjs";
+import { findGutenbergText, stripBoilerplate, splitParagraphs, looksLikeIndex } from "./gutenberg.mjs";
 
 const JOB = "quotes";
-const GUTENDEX = "https://gutendex.com/books";
-
-function lastNameOf(author) {
-  return author?.trim().split(" ").pop()?.toLowerCase() ?? "";
-}
-
-async function findGutenbergText(title, author) {
-  const json = await fetchJson(`${GUTENDEX}?search=${encodeURIComponent(title)}`, JOB);
-  const surname = lastNameOf(author);
-  const match = (json.results ?? []).find((b) =>
-    b.authors?.some((a) => lastNameOf(a.name.split(",").reverse().join(" ")) === surname)
-  );
-  if (!match) return null;
-
-  const url = match.formats?.["text/plain; charset=utf-8"] ?? match.formats?.["text/plain"];
-  if (!url) return null;
-
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return res.text();
-}
-
-/** Remove o cabeçalho/rodapé padrão do Gutenberg, deixando só o texto da obra. */
-function stripBoilerplate(raw) {
-  const startMatch = raw.match(/\*\*\*\s*START OF (THE|THIS) PROJECT GUTENBERG EBOOK[^*]*\*\*\*/i);
-  const endMatch = raw.match(/\*\*\*\s*END OF (THE|THIS) PROJECT GUTENBERG EBOOK[^*]*\*\*\*/i);
-  const start = startMatch ? startMatch.index + startMatch[0].length : 0;
-  const end = endMatch ? endMatch.index : raw.length;
-  return raw.slice(start, end);
-}
 
 /** Primeiro parágrafo "de prosa" real — pula sumário/títulos/capítulos em maiúsculas. */
 function firstParagraph(paragraphs) {
-  return paragraphs.find((p) => p.length > 60 && !/^[A-Z0-9\s.,'"-]+$/.test(p));
+  return paragraphs.find((p) => p.length > 60 && !/^[A-Z0-9\s.,'"-]+$/.test(p) && !looksLikeIndex(p));
 }
 
 function lastParagraph(paragraphs) {
-  return [...paragraphs].reverse().find((p) => p.length > 30);
+  return [...paragraphs].reverse().find((p) => p.length > 30 && !looksLikeIndex(p));
+}
+
+/** Corta no limite de palavra (nunca no meio de uma) — algumas frases famosas
+ * (ex. a abertura de "A Tale of Two Cities") passam fácil de 220 caracteres. */
+function truncateAtWord(text, max) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trim()}…`;
 }
 
 /** Corta um parágrafo na 1ª (ou última) frase, para caber como "pista" curta. */
 function firstSentence(paragraph) {
   const m = paragraph.match(/^.{10,220}?[.!?](?=\s|$)/s);
-  return (m ? m[0] : paragraph.slice(0, 200)).replace(/\s+/g, " ").trim();
+  const text = (m ? m[0] : paragraph).replace(/\s+/g, " ").trim();
+  return truncateAtWord(text, 220);
 }
 function lastSentence(paragraph) {
   const sentences = paragraph.match(/[^.!?]+[.!?]+/g) ?? [paragraph];
-  return sentences[sentences.length - 1].replace(/\s+/g, " ").trim().slice(0, 220);
+  const text = sentences[sentences.length - 1].replace(/\s+/g, " ").trim();
+  return truncateAtWord(text, 220);
 }
 
 /** @param {{ supabase: import('@supabase/supabase-js').SupabaseClient, limit?: number }} ctx */
@@ -94,10 +75,7 @@ export async function run({ supabase, limit = 20 }) {
       if (!raw) continue; // não está no domínio público (ou não achamos no Gutenberg) — fica para curadoria manual
 
       const text = stripBoilerplate(raw);
-      const paragraphs = text
-        .split(/\r?\n\s*\r?\n/)
-        .map((p) => p.replace(/\r?\n/g, " ").trim())
-        .filter(Boolean);
+      const paragraphs = splitParagraphs(text).map((p) => p.replace(/\r?\n/g, " ").trim());
 
       const opening = firstParagraph(paragraphs);
       const closing = lastParagraph(paragraphs);

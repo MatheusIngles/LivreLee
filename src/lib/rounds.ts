@@ -76,7 +76,12 @@ async function pickBook(mode: ModeDef, daily: boolean, date: string, lang: LangF
   // não recebe o filtro de gênero do evento pra não mexer nesse invariante.
   if (mode.id === "daily") return getDailyBook(lang);
 
-  const books = await eligibleBooks(mode.requires, lang, genre);
+  let books = await eligibleBooks(mode.requires, lang, genre);
+  if (books.length === 0 && genre) {
+    // O gênero do evento não tem conteúdo suficiente pra esse modo — ignora
+    // o tema da semana em vez de deixar o modo inteiro fora do ar.
+    books = await eligibleBooks(mode.requires, lang);
+  }
   if (books.length === 0) throw new NoContentError("nenhum livro elegível");
   return pickFrom(books, daily, `${mode.id}:${date}`);
 }
@@ -182,18 +187,33 @@ function filterByAllowedBooks<T extends { book_id: number }>(list: T[], allowed:
   return allowed ? list.filter((item) => allowed.has(item.book_id)) : list;
 }
 
+/**
+ * Filtra pelo gênero do evento; se isso zerar a lista (o tema da semana pode
+ * não ter nenhum livro com esse tipo específico de conteúdo — chapters,
+ * emojis etc. são pools pequenos), ignora o gênero em vez de derrubar o modo.
+ */
+async function filterByAllowedBooksForGenre<T extends { book_id: number }>(
+  list: T[],
+  lang: LangFilter,
+  genre?: string
+): Promise<T[]> {
+  const withGenre = filterByAllowedBooks(list, await allowedBookIds(lang, genre));
+  if (withGenre.length > 0 || !genre) return withGenre;
+  return filterByAllowedBooks(list, await allowedBookIds(lang));
+}
+
 async function pickQuote(kind: QuoteRow["kind"], daily: boolean, key: string, lang: LangFilter, genre?: string): Promise<QuoteRow> {
   const raw = supabaseConfigured()
     ? await fetchContent<QuoteRow>("quotes", ["kind", kind])
     : SEED_QUOTES.filter((q) => q.kind === kind);
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
+  const list = await filterByAllowedBooksForGenre(raw, lang, genre);
   if (list.length === 0) throw new NoContentError(`sem frases (${kind})`);
   return pickFrom(list, daily, key);
 }
 
 async function pickCharacter(daily: boolean, key: string, lang: LangFilter, genre?: string): Promise<CharacterRow> {
   const raw = supabaseConfigured() ? await fetchContent<CharacterRow>("characters") : SEED_CHARACTERS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
+  const list = await filterByAllowedBooksForGenre(raw, lang, genre);
   if (list.length === 0) throw new NoContentError("sem personagens");
   return pickFrom(list, daily, key);
 }
@@ -202,14 +222,14 @@ async function pickChapter(daily: boolean, key: string, lang: LangFilter, genre?
   const raw = supabaseConfigured()
     ? await fetchContent<{ book_id: number; name: string }>("chapters")
     : SEED_CHAPTERS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
+  const list = await filterByAllowedBooksForGenre(raw, lang, genre);
   if (list.length === 0) throw new NoContentError("sem capítulos");
   return pickFrom(list, daily, key);
 }
 
 async function pickAdaptation(daily: boolean, key: string, lang: LangFilter, genre?: string): Promise<AdaptationRow> {
   const raw = supabaseConfigured() ? await fetchContent<AdaptationRow>("adaptations") : SEED_ADAPTATIONS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
+  const list = await filterByAllowedBooksForGenre(raw, lang, genre);
   if (list.length === 0) throw new NoContentError("sem adaptações");
   return pickFrom(list, daily, key);
 }
@@ -218,7 +238,7 @@ async function pickEmoji(daily: boolean, key: string, lang: LangFilter, genre?: 
   const raw = supabaseConfigured()
     ? await fetchContent<{ book_id: number; emoji: string }>("book_emojis")
     : SEED_EMOJIS;
-  const list = filterByAllowedBooks(raw, await allowedBookIds(lang, genre));
+  const list = await filterByAllowedBooksForGenre(raw, lang, genre);
   if (list.length === 0) throw new NoContentError("sem emojis");
   return pickFrom(list, daily, key);
 }
@@ -268,16 +288,11 @@ export async function buildRound(
       const author = pickFrom(authors, daily, key);
       return { clue: {}, answer: { m: mode.id, a: author.name, d: daily ? date : undefined } };
     }
-    case "quote:quote":
     case "quote:opening":
-    case "quote:closing":
-    case "quote:character": {
+    case "quote:closing": {
       const kind = mode.source.split(":")[1] as QuoteRow["kind"];
       const q = await pickQuote(kind, daily, key, lang, genre);
-      const clue: Record<string, unknown> = { text: q.text };
-      if (kind === "quote") clue.context = q.context;
-      if (kind === "character") clue.hint = "Alguém disse isto.";
-      return { clue, answer: { m: mode.id, b: q.book_id, d: daily ? date : undefined } };
+      return { clue: { text: q.text }, answer: { m: mode.id, b: q.book_id, d: daily ? date : undefined } };
     }
     case "character": {
       const c = await pickCharacter(daily, key, lang, genre);

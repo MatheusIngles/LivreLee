@@ -77,18 +77,6 @@ export const MODES: ModeDef[] = [
 
   // --------------------------------- frases -------------------------------
   {
-    id: "quote",
-    emoji: "💬",
-    group: "frases",
-    guessType: "book",
-    clueType: "quote",
-    source: "quote:quote",
-    compare: "book",
-    maxGuesses: 6,
-    progressive: false,
-    available: true,
-  },
-  {
     id: "opening",
     emoji: "📖",
     group: "frases",
@@ -112,19 +100,6 @@ export const MODES: ModeDef[] = [
     progressive: false,
     available: true,
   },
-  {
-    id: "character-quote",
-    emoji: "🗣️",
-    group: "frases",
-    guessType: "book",
-    clueType: "character-quote",
-    source: "quote:character",
-    compare: "book",
-    maxGuesses: 6,
-    progressive: false,
-    available: true,
-  },
-
   // ------------------------ adivinhe pelo livro ---------------------------
   {
     id: "character",
@@ -306,7 +281,6 @@ export const MODES: ModeDef[] = [
     progressive: false,
     available: true,
     mixOf: [
-      "quote",
       "opening",
       "character",
       "book-by-character",
