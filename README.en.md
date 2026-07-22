@@ -37,8 +37,6 @@ grant all on all tables in schema public to service_role;
 NOTIFY pgrst, 'reload schema';
 ```
 
-**Important in production:** set `ROUND_SECRET` (or at least `CRON_SECRET`). Round tokens are HMAC-signed — without your own secret, it falls back to a fixed value, and anyone reading the source can forge a win.
-
 ## The catalog updates itself
 
 After the initial seed, there's a GitHub Actions workflow ([ingestion-jobs.yml](.github/workflows/ingestion-jobs.yml)) that runs every day on its own, pulling in more real content:

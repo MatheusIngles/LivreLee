@@ -37,8 +37,6 @@ grant all on all tables in schema public to service_role;
 NOTIFY pgrst, 'reload schema';
 ```
 
-**Importante em produção:** define `ROUND_SECRET` (ou pelo menos `CRON_SECRET`). Os tokens de rodada são assinados com HMAC — sem segredo próprio, cai num valor fixo e dá pra forjar vitória lendo o código.
-
 ## O catálogo se atualiza sozinho
 
 Depois do seed inicial, tem um workflow do GitHub Actions ([ingestion-jobs.yml](.github/workflows/ingestion-jobs.yml)) que roda todo dia, sozinho, buscando mais conteúdo real:

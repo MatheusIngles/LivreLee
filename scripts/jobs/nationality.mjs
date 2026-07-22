@@ -52,6 +52,7 @@ const HISTORICAL_TO_MODERN = new Map([
   ["Reino da França", "França"],
   ["Primeira República Francesa", "França"],
   ["Reino de Espanha", "Espanha"],
+  ["Reino de Portugal", "Portugal"],
 ]);
 
 function normalizeCountry(country) {

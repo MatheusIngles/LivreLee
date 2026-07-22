@@ -5,6 +5,13 @@
 // Deduplicação: cada livro é gravado com (source='openlibrary', source_key=work
 // key). A tabela tem UNIQUE(source, source_key), então re-execuções fazem
 // UPSERT — atualizam o que mudou e não duplicam.
+//
+// Isso só cobre o MESMO source_key — um livro que já está no catálogo com
+// source=null (seed antiga) ou um source_key diferente (ex: outra edição da
+// mesma obra) não bate no UNIQUE e vira uma linha nova, duplicada por
+// título+autor. Por isso, antes de inserir, também filtramos fora qualquer
+// candidato cujo (título, autor) já exista na tabela — mesmo vindo de outra
+// fonte/edição.
 
 import { fetchJson, sleep, chunk, log, warn } from "./lib.mjs";
 import { LANG, resolveCountryLanguage } from "./book-lang.mjs";
@@ -65,14 +72,38 @@ export async function run({ supabase, perSubject = 25 }) {
     }
   }
 
+  // livros já catalogados (qualquer fonte) — pra não recriar como duplicata.
+  // Uma linha só pode ser ATUALIZADA (mesmo source_key já rastreado); uma
+  // linha nova cujo título+autor já existe sob outra fonte/edição é ignorada.
+  const trackedKeys = new Set();
+  const titleAuthorSeen = new Set();
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase.from("books").select("source,source_key,title,author").range(from, from + 999);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    for (const b of data) {
+      if (b.source && b.source_key) trackedKeys.add(`${b.source}::${b.source_key}`);
+      titleAuthorSeen.add(`${b.title.trim().toLowerCase()}::${b.author.trim().toLowerCase()}`);
+    }
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+
+  const candidates = [...rows.values()].filter((b) => {
+    if (trackedKeys.has(`openlibrary::${b.source_key}`)) return true; // atualização de linha já rastreada
+    return !titleAuthorSeen.has(`${b.title.trim().toLowerCase()}::${b.author.trim().toLowerCase()}`);
+  });
+  const skipped = rows.size - candidates.length;
+
   let upserted = 0;
-  for (const batch of chunk([...rows.values()], 200)) {
+  for (const batch of chunk(candidates, 200)) {
     const { error } = await supabase
       .from("books")
       .upsert(batch, { onConflict: "source,source_key" });
     if (error) throw new Error(error.message);
     upserted += batch.length;
   }
-  log(JOB, `upsert de ${upserted} livros concluído.`);
-  return { upserted };
+  log(JOB, `upsert de ${upserted} livros concluído (${skipped} já existiam no catálogo, ignorados).`);
+  return { upserted, skipped };
 }

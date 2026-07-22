@@ -14,12 +14,12 @@ on:
       jobs:
         description: "Jobs a rodar (nomes separados por espaço, ver: node scripts/run-jobs.mjs --list)"
         required: false
-        default: "openlibrary google-books covers characters adaptations quotes chapters sales nationality"
+        default: "openlibrary google-books covers characters adaptations sales nationality quotes chapters"
 
 jobs:
   run-jobs:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
 
@@ -37,4 +37,4 @@ jobs:
           GOOGLE_BOOKS_KEY: ${{ secrets.GOOGLE_BOOKS_KEY }}
         run: >
           node scripts/run-jobs.mjs
-          ${{ github.event.inputs.jobs || 'openlibrary google-books covers characters adaptations quotes chapters sales nationality' }}
+          ${{ github.event.inputs.jobs || 'openlibrary google-books covers characters adaptations sales nationality quotes chapters' }}

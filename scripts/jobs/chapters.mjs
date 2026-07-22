@@ -39,7 +39,7 @@ function parseIndex(indexParagraph) {
 }
 
 /** @param {{ supabase: import('@supabase/supabase-js').SupabaseClient, limit?: number }} ctx */
-export async function run({ supabase, limit = 50 }) {
+export async function run({ supabase, limit = 20 }) {
   // Livros sem sumário utilizável (fora do Gutenberg, ou TOC sem títulos —
   // caso do Frankenstein) nunca entram em `chapters`, então continuam na
   // "fila" pra sempre — um limite maior aqui compensa esse desperdício e
