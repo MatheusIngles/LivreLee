@@ -92,4 +92,34 @@ function mapKind(typeLabel) {
   return "filme";
 }
 
-export const politeDelay = () => sleep(500);
+/** Busca o item Wikidata de uma pessoa (autor) por nome, exigindo P31=Q5 (ser humano). */
+export async function findAuthorEntity(name) {
+  const url = `${API}?action=wbsearchentities&search=${encodeURIComponent(name)}&language=en&type=item&limit=5&format=json`;
+  const json = await fetchJson(url, "wikidata");
+  const candidates = json.search ?? [];
+  for (const c of candidates) {
+    const rows = await sparql(`
+      SELECT ?item WHERE { wd:${c.id} wdt:P31 wd:Q5. } LIMIT 1
+    `);
+    if (rows.length > 0) return c.id;
+  }
+  return null;
+}
+
+/** País de cidadania (P27) e língua nativa (P103) do autor, com rótulo em pt (fallback en). */
+export async function findAuthorNationality(qid) {
+  const rows = await sparql(`
+    SELECT ?countryLabel ?langLabel WHERE {
+      OPTIONAL { wd:${qid} wdt:P27 ?country. }
+      OPTIONAL { wd:${qid} wdt:P103 ?lang. }
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+    } LIMIT 1
+  `);
+  const row = rows[0];
+  return {
+    country: row?.countryLabel?.value ?? null,
+    nativeLanguage: row?.langLabel?.value ?? null,
+  };
+}
+
+export const politeDelay = () => sleep(1500);

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatStat } from "@/lib/format-stat";
 import type { LangFilter } from "@/lib/lang";
 import type { ModeDef } from "@/lib/modes/types";
@@ -322,6 +322,14 @@ function CoverThumb({
 }) {
   const [src, setSrc] = useState(coverUrl);
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // next/image às vezes não dispara onLoad quando a imagem já veio do cache
+  // do navegador (o evento "load" só ocorre uma vez, antes do listener ser
+  // anexado) — sem isso, o skeleton ficava grudado na tela pra sempre.
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, [src]);
 
   useEffect(() => {
     if (src) return;
@@ -346,6 +354,7 @@ function CoverThumb({
     <>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-zinc-700" />}
       <Image
+        ref={imgRef}
         src={src}
         alt={title}
         fill

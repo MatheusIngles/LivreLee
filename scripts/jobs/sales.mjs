@@ -90,7 +90,7 @@ export async function run({ supabase, limit = 30 }) {
     } catch (err) {
       warn(JOB, `falha em "${book.title}": ${err.message}`);
     }
-    await sleep(400);
+    await sleep(1200);
   }
   log(JOB, `${filled}/${books.length} estimativas de vendas preenchidas.`);
   return { filled };

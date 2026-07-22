@@ -17,6 +17,7 @@ import * as adaptations from "./jobs/adaptations.mjs";
 import * as quotes from "./jobs/quotes.mjs";
 import * as chapters from "./jobs/chapters.mjs";
 import * as sales from "./jobs/sales.mjs";
+import * as nationality from "./jobs/nationality.mjs";
 
 /** Job ainda sem fonte configurada: registrado, à espera de implementação. */
 function todoJob(what) {
@@ -38,6 +39,7 @@ const JOBS = {
   quotes: { description: "1ª/última frase via Project Gutenberg (só domínio público).", run: quotes.run },
   chapters: { description: "Nomes de capítulo via sumário do Project Gutenberg (só domínio público).", run: chapters.run },
   sales: { description: "sales_estimate via menção de vendas no resumo da Wikipedia.", run: sales.run },
+  nationality: { description: "Corrige country/language via nacionalidade do autor (Wikidata).", run: nationality.run },
   "recalc-rankings": todoJob("Recalcular rankings"),
 };
 

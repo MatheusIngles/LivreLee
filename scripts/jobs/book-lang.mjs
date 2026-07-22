@@ -81,10 +81,18 @@ export const AUTHORS = {
   "Guimarães Rosa": ["Brasil", "Português"],
 };
 
+// normaliza pra casar variações de grafia (ex: "J.R.R. Tolkien" vs "J. R. R. Tolkien")
+const normalizeAuthor = (name) => name.replace(/[.\s]/g, "").toLowerCase();
+
+const AUTHORS_NORMALIZED = new Map(
+  Object.entries(AUTHORS).map(([name, value]) => [normalizeAuthor(name), value])
+);
+
 /** País/idioma de um livro dado o código de idioma da busca (já filtrado). */
 export function resolveCountryLanguage(author, langCode) {
-  if (AUTHORS[author]) {
-    const [country, language] = AUTHORS[author];
+  const known = AUTHORS_NORMALIZED.get(normalizeAuthor(author));
+  if (known) {
+    const [country, language] = known;
     return { country, language };
   }
   const fallback = LANG[langCode];
